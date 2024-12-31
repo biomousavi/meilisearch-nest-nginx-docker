@@ -1,0 +1,53 @@
+services:
+
+  # Nestjs API Service
+  api:
+    build:
+      context: .
+      target: production
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    networks:
+      - biomousavi
+    depends_on:
+      - meilisearch
+    ports:
+      - 3000:3000
+    command: 'dist/main.js'
+
+  # Meilisearch Service
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    volumes:
+      - meilisearch-volume:/meili_data
+    ports:
+      - '7700:7700'
+    environment:
+      - MEILI_MASTER_KEY=masterKey
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:7700']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - biomousavi
+
+  # Nginx Service
+  nginx:
+    image: nginx:alpine
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - biomousavi
+    depends_on:
+      - api
+      - meilisearch
+
+networks:
+  biomousavi:
+    driver: bridge
+
+volumes:
+  meilisearch-volume:
